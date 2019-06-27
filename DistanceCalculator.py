@@ -14,7 +14,7 @@ mapArray = band.ReadAsArray()
 #Get geotransform information and declare some variables for later use
 geotransform = raster.GetGeoTransform()
 originX = geotransform[0]
-originY = geotransform[3] 
+originY = geotransform[3]
 pixelWidth = geotransform[1] 
 pixelHeight = geotransform[5]
 
