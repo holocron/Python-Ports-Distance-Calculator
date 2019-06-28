@@ -1,5 +1,5 @@
 import gdal, osr 
-from skimage.graph import route_through_array
+from skimage import graph
 import numpy as np 
 from geopy import distance
 #import matplotlib.pyplot as plt
@@ -19,6 +19,17 @@ pixelWidth = geotransform[1]
 pixelHeight = geotransform[5]
 
 ports = pd.read_csv('port.csv')
+
+def my_route(array, start, end, fully_connected=True, geometric=True):
+    start, end = tuple(start), tuple(end)
+#    if geometric:
+#        mcp_class = graph.MCP_Geometric
+#    else:
+#        mcp_class = graph.MCP
+#    m = mcp_class(array, fully_connected=fully_connected)
+    m = graph.MCP_Connect(array, fully_connected=fully_connected)
+    costs, traceback_array = m.find_costs([start], [end])
+    return m.traceback(end), costs[end]
 
 #transform the coordinates to the exact position in the array.
 def coord2pixelOffset(x,y):
@@ -40,7 +51,12 @@ def createPath(costSurfaceArray,startCoord,stopCoord):
     stopIndexX,stopIndexY = coord2pixelOffset(stopCoordX,stopCoordY)
 
     # create path
-    indices, weight = route_through_array(costSurfaceArray, (startIndexY,startIndexX), (stopIndexY,stopIndexX),geometric=True,fully_connected=True)
+#    indices, weight = graph.route_through_array(costSurfaceArray, 
+    indices, weight = my_route(costSurfaceArray, 
+        (startIndexY,startIndexX), 
+        (stopIndexY,stopIndexX),
+        geometric=True,
+        fully_connected=True)
     indices = np.array(indices).T
     indices = indices.astype(float)
     indices[1] = indices[1]*pixelWidth + originX
@@ -64,12 +80,11 @@ def routePorts(fromPort, toPort):
     pathIndices = createPath(mapArray,startCoord,stopCoord)
     dist = calculateDistance(pathIndices)
 
-    print("distance is " + str(dist))
+    print("distance is " + str(dist) + " NM")
 
     gmap3 = gmplot.GoogleMapPlotter((fromPort.longitude+toPort.longitude)/2, (fromPort.latitude+toPort.latitude)/2, 3)
-    gmap3.plot(pathIndices[0,:], pathIndices[1,:],  
-            'cornflowerblue', edge_width = 2.5) 
+    gmap3.plot(pathIndices[0,:], pathIndices[1,:], 'cornflowerblue', edge_width = 2.5) 
     gmap3.draw( "map-"+fromPort.Port+"-"+toPort.Port+".html") 
 
-routePorts(ports.iloc[2377],ports.iloc[1788])
+routePorts(ports.iloc[2377],ports.iloc[2139])
 routePorts(ports.iloc[2205],ports.iloc[1000])
